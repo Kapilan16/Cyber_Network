@@ -1,0 +1,271 @@
+/* ── FindingsPanel — per-finding severity + snippet + MITRE badge ── */
+
+.fp-root {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Toolbar ── */
+.fp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.fp-toolbar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clr-text-muted);
+}
+
+.fp-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  color: var(--clr-text);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.fp-input:focus { border-color: rgba(0,200,255,0.4); }
+.fp-input::placeholder { color: var(--clr-text-muted); }
+
+.fp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--clr-border);
+  background: transparent;
+  color: var(--clr-accent);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+.fp-btn:hover { background: rgba(0,200,255,0.08); border-color: rgba(0,200,255,0.35); }
+.fp-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.fp-btn.primary {
+  background: rgba(0,200,255,0.12);
+  border-color: rgba(0,200,255,0.3);
+}
+
+/* ── Summary bar ── */
+.fp-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.fp-summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+}
+.fp-summary-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--clr-accent);
+  line-height: 1;
+}
+.fp-summary-stat-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--clr-text-muted);
+  margin-top: 3px;
+}
+
+.fp-summary-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--clr-border);
+}
+
+.fp-tactic-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  flex: 1;
+}
+.fp-tactic-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(124,58,237,0.18);
+  border: 1px solid rgba(124,58,237,0.35);
+  color: #c4b5fd;
+}
+
+/* ── Finding cards ── */
+.fp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fp-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.1rem;
+  transition: border-color 0.2s, transform 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.fp-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+.fp-card.sev-critical::before { background: #ef4444; }
+.fp-card.sev-high::before     { background: #f97316; }
+.fp-card.sev-medium::before   { background: #f59e0b; }
+.fp-card.sev-low::before      { background: #22d3a5; }
+
+.fp-card:hover {
+  border-color: rgba(0,200,255,0.22);
+  transform: translateX(2px);
+}
+
+.fp-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.fp-rule-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--clr-text);
+  flex: 1;
+  min-width: 180px;
+}
+
+.fp-sev-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fp-sev-badge.critical { background: rgba(239,68,68,0.18);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+.fp-sev-badge.high     { background: rgba(249,115,22,0.18); color: #fdba74; border: 1px solid rgba(249,115,22,0.3); }
+.fp-sev-badge.medium   { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+.fp-sev-badge.low      { background: rgba(34,211,165,0.12); color: #6ee7b7; border: 1px solid rgba(34,211,165,0.25);}
+
+/* ── MITRE badge ── */
+.fp-mitre-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.35);
+  cursor: default;
+  transition: background 0.18s;
+}
+.fp-mitre-badge:hover { background: rgba(124,58,237,0.28); }
+
+.fp-mitre-id {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #a78bfa;
+}
+.fp-mitre-name {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #c4b5fd;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fp-mitre-tactic {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--clr-text-muted);
+  border-left: 1px solid rgba(124,58,237,0.3);
+  padding-left: 5px;
+}
+
+/* ── Snippet ── */
+.fp-snippet {
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.7rem;
+  background: var(--clr-surface-2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  color: var(--clr-text-muted);
+  line-height: 1.5;
+  word-break: break-all;
+}
+.fp-snippet mark {
+  background: transparent;
+  color: var(--clr-accent);
+  font-weight: 600;
+}
+
+/* ── Empty / loading ── */
+.fp-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--clr-text-muted);
+  font-size: 0.85rem;
+}
+.fp-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
+
+.fp-loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--clr-text-muted);
+  font-size: 0.8rem;
+}
+
+/* ── Submission selector ── */
+.fp-selector {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.fp-selector label {
+  font-size: 0.78rem;
+  color: var(--clr-text-muted);
+  font-weight: 500;
+}
+.fp-selector-hint {
+  font-size: 0.72rem;
+  color: var(--clr-text-muted);
+  font-style: italic;
+}
