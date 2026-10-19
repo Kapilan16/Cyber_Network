@@ -33,6 +33,12 @@
   border-radius: 2px 2px 0 0;
 }
 .dh-stat-card:hover { border-color: rgba(0,200,255,0.18); transform: translateY(-2px); }
+.dh-campaign-card {
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 
 .dh-stat-icon { font-size: 1.4rem; margin-bottom: 0.1rem; }
 .dh-stat-value {

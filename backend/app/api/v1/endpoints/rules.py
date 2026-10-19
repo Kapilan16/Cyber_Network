@@ -11,18 +11,21 @@ DELETE /api/rules/{rule_id}          — delete a rule (admin only)
 """
 from __future__ import annotations
 
+import json
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.deps import get_current_admin, get_current_user
 from app.core.database import get_db
+from app.embeddings.client import get_embeddings_client
 from app.models.mitre_technique import MitreTechnique
 from app.models.raw_submission import RawSubmission
 from app.models.rule import Finding, Rule, Severity
 from app.models.user import User, UserRole
+from app.risk.service import compute_submission_risk_score_background
 from app.rules.evaluator import evaluate_rule
 from app.rules.seed_rules import SEED_RULES
 
@@ -104,6 +107,17 @@ def _finding_out(f: Finding, db: "Session | None" = None) -> FindingOut:
     )
 
 
+def _set_description_embedding(rule: Rule, db: Session) -> None:
+    description = (rule.description or "").strip()
+    vector = get_embeddings_client().embed(description) if description else None
+    if vector is None:
+        rule.description_embedding = None
+    elif db.bind.dialect.name == "sqlite":
+        rule.description_embedding = json.dumps(vector)
+    else:
+        rule.description_embedding = vector
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.post(
@@ -115,6 +129,7 @@ def _finding_out(f: Finding, db: "Session | None" = None) -> FindingOut:
 )
 def evaluate_submission(
     submission_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> EvaluateResponse:
@@ -165,6 +180,15 @@ def evaluate_submission(
             new_findings.append(finding)
 
     db.commit()
+    background_tasks.add_task(
+        compute_submission_risk_score_background,
+        submission_id,
+        session_factory=sessionmaker(
+            bind=db.get_bind(),
+            autoflush=False,
+            autocommit=False,
+        ),
+    )
     for f in new_findings:
         db.refresh(f)
 
@@ -233,6 +257,8 @@ def seed_rules(
     for rule_data in SEED_RULES:
         exists = db.query(Rule).filter(Rule.name == rule_data["name"]).first()
         if exists:
+            if exists.description and exists.description_embedding is None:
+                _set_description_embedding(exists, db)
             continue
         rule = Rule(
             name=rule_data["name"],
@@ -242,8 +268,14 @@ def seed_rules(
             mitre_technique_id=rule_data.get("mitre_technique_id"),
             is_active=True,
         )
+        _set_description_embedding(rule, db)
         db.add(rule)
         created += 1
+    for rule in db.query(Rule).filter(
+        Rule.description.is_not(None),
+        Rule.description_embedding.is_(None),
+    ):
+        _set_description_embedding(rule, db)
     db.commit()
     return {"rules_created": created, "total_seed_rules": len(SEED_RULES)}
 
@@ -294,6 +326,7 @@ def create_rule(
         mitre_technique_id=body.mitre_technique_id,
         is_active=body.is_active,
     )
+    _set_description_embedding(rule, db)
     db.add(rule)
     db.commit()
     db.refresh(rule)
@@ -320,6 +353,8 @@ def update_rule(
     updates = body.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(rule, field, value)
+    if "description" in updates:
+        _set_description_embedding(rule, db)
     db.commit()
     db.refresh(rule)
     return rule
@@ -344,4 +379,3 @@ def delete_rule(
     db.delete(rule)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-

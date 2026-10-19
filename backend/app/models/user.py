@@ -4,7 +4,7 @@ User ORM model.
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Enum, Integer, String
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -16,10 +16,21 @@ class UserRole(str, enum.Enum):
     admin = "admin"
 
 
+DEFAULT_ORGANIZATION_ID = 1
+
+
 class User(Base):
     __tablename__ = "users"
 
     id: int = Column(Integer, primary_key=True, index=True)
+    org_id: int = Column(
+        Integer,
+        ForeignKey("organizations.id"),
+        nullable=False,
+        default=DEFAULT_ORGANIZATION_ID,
+        server_default=str(DEFAULT_ORGANIZATION_ID),
+        index=True,
+    )
     email: str = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password: str = Column(String(255), nullable=False)
     role: UserRole = Column(
@@ -38,6 +49,7 @@ class User(Base):
     submissions = relationship(
         "RawSubmission", back_populates="submitter", lazy="dynamic"
     )
+    organization = relationship("Organization", back_populates="users")
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<User id={self.id} email={self.email!r} role={self.role}>"

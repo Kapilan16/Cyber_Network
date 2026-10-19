@@ -8,6 +8,8 @@ They are purely illustrative — not attack payloads.
 """
 from __future__ import annotations
 
+from app.enrichment.iocs import IPV4_PATTERN, MD5_PATTERN, SHA256_PATTERN
+
 SEED_RULES: list[dict] = [
     # ── Credential exposure ────────────────────────────────────────────────
     {
@@ -112,7 +114,7 @@ SEED_RULES: list[dict] = [
         "mitre_technique_id": None,
         "condition_json": {
             "op": "regex",
-            "pattern": r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b",
+            "pattern": IPV4_PATTERN,
         },
     },
     {
@@ -122,7 +124,7 @@ SEED_RULES: list[dict] = [
         "mitre_technique_id": None,
         "condition_json": {
             "op": "regex",
-            "pattern": r"\b[0-9a-fA-F]{32}\b",
+            "pattern": MD5_PATTERN,
         },
     },
     {
@@ -132,7 +134,7 @@ SEED_RULES: list[dict] = [
         "mitre_technique_id": None,
         "condition_json": {
             "op": "regex",
-            "pattern": r"\b[0-9a-fA-F]{64}\b",
+            "pattern": SHA256_PATTERN,
         },
     },
 

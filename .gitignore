@@ -33,3 +33,7 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 *.swp
+backend/test.db
+backend/test.db
+.venv/
+node_modules/

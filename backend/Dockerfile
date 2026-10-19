@@ -12,8 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
+COPY requirements.txt constraints-cpu.txt .
+RUN pip install --prefix=/install --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        --constraint constraints-cpu.txt \
+        -r requirements.txt
 
 # ── Stage 2: production runner ────────────────────────────────────────────────
 FROM python:3.11-slim AS runner
@@ -29,8 +32,10 @@ COPY scripts/ ./scripts/
 COPY alembic/ ./alembic/
 COPY alembic.ini .
 
-# Non-root user for security
-RUN useradd --create-home appuser
+# Non-root user for security; the cache mount inherits these permissions.
+RUN useradd --create-home appuser \
+    && mkdir -p /home/appuser/.cache/huggingface \
+    && chown -R appuser:appuser /home/appuser/.cache
 USER appuser
 
 EXPOSE 8000

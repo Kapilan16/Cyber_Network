@@ -29,10 +29,15 @@ services:
     environment:
       # Override host so backend reaches postgres container by service name
       DATABASE_URL: postgresql+psycopg2://cyberuser:cyberpass@postgres:5432/cyberdb
+      CENTRAL_SERVER_URL: http://central-server:8100
+      CENTRAL_ADMIN_TOKEN: ${CENTRAL_ADMIN_TOKEN:-local-dev-admin-token-change-me}
+      HF_HOME: /home/appuser/.cache/huggingface
     ports:
       - "8000:8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      central-server:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
@@ -43,6 +48,55 @@ services:
     volumes:
       # Hot-reload: mount source in dev (remove in production)
       - ../backend/app:/app/app:ro
+      - huggingface_cache:/home/appuser/.cache/huggingface
+
+  # ── Central organization registry (isolated database) ───────────────────
+  central-postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: centraldb
+      POSTGRES_USER: centraluser
+      POSTGRES_PASSWORD: ${CENTRAL_POSTGRES_PASSWORD:-central-local-dev-password}
+    volumes:
+      - central_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U centraluser -d centraldb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  central-server:
+    build:
+      context: ../central-server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      CENTRAL_DATABASE_URL: postgresql+psycopg2://centraluser:${CENTRAL_POSTGRES_PASSWORD:-central-local-dev-password}@central-postgres:5432/centraldb
+      CENTRAL_SIGNING_SECRET: ${CENTRAL_SIGNING_SECRET:-local-dev-signing-secret-change-me-before-deployment}
+      CENTRAL_ADMIN_TOKEN: ${CENTRAL_ADMIN_TOKEN:-local-dev-admin-token-change-me}
+      CENTRAL_VECTOR_DIM: ${VECTOR_DIM:-1536}
+      LOCAL_EMBEDDING_MODEL: ${LOCAL_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      VIRUSTOTAL_API_KEY: ""
+      ABUSEIPDB_API_KEY: ""
+      HF_HOME: /root/.cache/huggingface
+      CENTRAL_ALLOW_READ_WITHOUT_CONTRIBUTION: ${CENTRAL_ALLOW_READ_WITHOUT_CONTRIBUTION:-true}
+    ports:
+      - "8100:8100"
+    depends_on:
+      central-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8100/api/central/health')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   # ── Frontend (React + Vite via Nginx) ─────────────────────────────────────
   frontend:
@@ -55,6 +109,10 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      central-server:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  central_postgres_data:
+  huggingface_cache:

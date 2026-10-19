@@ -1,0 +1,23 @@
+.network-settings { display: grid; gap: 1rem; }
+.network-settings-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+}
+.network-settings-card h2 { font-size: 1rem; }
+.network-settings-card p { color: var(--clr-text-muted); font-size: 0.78rem; line-height: 1.65; }
+.network-settings-kicker { color: var(--clr-accent) !important; font: 0.65rem var(--font-mono) !important; letter-spacing: 0.08em; text-transform: uppercase; }
+.network-settings-toggle { display: flex; align-items: center; gap: 0.65rem; width: fit-content; color: var(--clr-text); font-size: 0.82rem; cursor: pointer; }
+.network-settings-toggle input { width: 1.05rem; height: 1.05rem; accent-color: var(--clr-accent); }
+.network-settings-toggle input:disabled { cursor: wait; }
+.network-settings-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 0.85rem; }
+.network-settings-metrics strong { font: 600 1.5rem var(--font-mono); }
+.network-sync-state { text-transform: capitalize; }
+.network-sync-state.shared, .network-sync-state.duplicate { color: var(--clr-success); }
+.network-sync-state.failed { color: #fca5a5; }
+.network-sync-state.pending { color: var(--clr-warn); }
+.network-settings-error { padding: 0.7rem; color: #fca5a5 !important; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); background: rgba(127, 29, 29, 0.12); font-size: 0.8rem; }
+.network-settings-refresh { justify-self: start; border: 1px solid var(--clr-border); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; background: var(--clr-surface-2); color: var(--clr-text); cursor: pointer; }

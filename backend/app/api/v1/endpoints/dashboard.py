@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.models.memory import CorrelationLink, MemoryNode, MemoryNodeStatus
 from app.models.mitre_technique import MitreTechnique
 from app.models.raw_submission import RawSubmission
 from app.models.rule import Finding, Rule, Severity
@@ -53,6 +54,7 @@ class DashboardSummary(BaseModel):
     active_rules: int
     embedding_complete_count: int
     embedding_pending_count: int
+    active_campaign_count: int
 
 
 # ── Route ─────────────────────────────────────────────────────────────────────
@@ -90,6 +92,19 @@ def get_dashboard_summary(
     embedding_pending_count = sub_q.filter(
         RawSubmission.embedding_status == EmbeddingStatus.pending
     ).count()
+
+    campaign_q = (
+        db.query(func.count(func.distinct(MemoryNode.id)))
+        .join(CorrelationLink, CorrelationLink.memory_node_id == MemoryNode.id)
+        .join(RawSubmission, CorrelationLink.submission_id == RawSubmission.id)
+        .filter(
+            MemoryNode.is_recurring.is_(True),
+            MemoryNode.status == MemoryNodeStatus.active,
+        )
+    )
+    if not is_admin:
+        campaign_q = campaign_q.filter(RawSubmission.user_id == current_user.id)
+    active_campaign_count = campaign_q.scalar() or 0
 
     # ── Findings by severity ──────────────────────────────────────────────
     finding_q = db.query(Finding.severity, func.count(Finding.id).label("n"))
@@ -146,4 +161,5 @@ def get_dashboard_summary(
         active_rules=active_rules,
         embedding_complete_count=embedding_complete_count,
         embedding_pending_count=embedding_pending_count,
+        active_campaign_count=active_campaign_count,
     )

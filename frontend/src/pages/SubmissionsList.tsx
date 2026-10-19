@@ -14,6 +14,8 @@ interface SubmissionRow {
   submitted_at: string
   sanitization_status: string
   embedding_status: string
+  risk_score: number | null
+  risk_band: 'low' | 'medium' | 'high' | 'critical' | null
   sanitized_text: string | null
   findings_by_severity: { critical: number; high: number; medium: number; low: number }
 }
@@ -48,6 +50,11 @@ function SanBadge({ status }: { status: string }) {
 function EmbBadge({ status }: { status: string }) {
   const icon = status === 'complete' ? '🟢' : status === 'failed' ? '🔴' : '⏳'
   return <span className={`sl-emb ${status}`}>{icon} {status}</span>
+}
+
+function RiskBadge({ score, band }: { score: number | null; band: SubmissionRow['risk_band'] }) {
+  if (score === null || band === null) return <span className="sl-risk sl-risk-pending">Pending</span>
+  return <span className={`sl-risk sl-risk-${band}`}>{band} · {score}</span>
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -131,6 +138,7 @@ export default function SubmissionsList({ onSelectSubmission }: Props) {
               <th>Sanitization</th>
               <th>Embedding</th>
               <th>Findings</th>
+              <th>Risk</th>
               <th>Preview</th>
               <th></th>
             </tr>
@@ -138,12 +146,12 @@ export default function SubmissionsList({ onSelectSubmission }: Props) {
           <tbody>
             {loading && (
               <tr className="sl-loading-row">
-                <td colSpan={8}>Loading submissions…</td>
+                <td colSpan={9}>Loading submissions…</td>
               </tr>
             )}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--clr-text-muted)' }}>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--clr-text-muted)' }}>
                   No submissions found. Submit your first security artifact above.
                 </td>
               </tr>
@@ -166,6 +174,7 @@ export default function SubmissionsList({ onSelectSubmission }: Props) {
                   <span className="medium">M {sub.findings_by_severity.medium}</span>
                   <span className="low">L {sub.findings_by_severity.low}</span>
                 </td>
+                <td><RiskBadge score={sub.risk_score} band={sub.risk_band} /></td>
                 <td style={{ maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
                   {sub.sanitized_text?.slice(0, 80) ?? '—'}
                 </td>

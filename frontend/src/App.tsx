@@ -8,6 +8,10 @@ import SubmissionDetail from './pages/SubmissionDetail'
 import SubmissionsList from './pages/SubmissionsList'
 import SubmissionIntake from './pages/SubmissionIntake'
 import SemanticSearch from './pages/SemanticSearch'
+import MemoryNetwork from './pages/MemoryNetwork'
+import NetworkSettings from './pages/NetworkSettings'
+import CentralAdmin from './pages/CentralAdmin'
+import Analytics from './pages/Analytics'
 import './pages/WorkspaceShell.css'
 
 type HealthStatus = 'loading' | 'ok' | 'error'
@@ -289,17 +293,24 @@ function AppInner() {
     setPath(destination)
   }
 
+  if (path === '/central-admin') return <CentralAdmin />
+
   if (!isAuthenticated) {
     return <AuthPage onSuccess={() => navigate('/')} />
   }
 
   const detailMatch = path.match(/^\/submissions\/(\d+)$/)
-  const activePath = detailMatch ? '/submissions' : path
+  const memoryDetailMatch = path.match(/^\/memory\/(\d+)$/)
+  const activePath = detailMatch ? '/submissions' : memoryDetailMatch ? '/memory' : path
   const pageTitle = detailMatch
     ? `Submission #${detailMatch[1]}`
-    : path === '/submissions/new' ? 'New submission'
-      : path === '/submissions' ? 'Submissions'
-        : path === '/search' ? 'Semantic search' : 'Analyst overview'
+    : memoryDetailMatch ? 'Memory node'
+      : path === '/memory' ? 'Memory Network'
+        : path === '/analytics' ? 'Analytics'
+        : path === '/network-settings' ? 'Network settings'
+        : path === '/submissions/new' ? 'New submission'
+          : path === '/submissions' ? 'Submissions'
+            : path === '/search' ? 'Semantic search' : 'Analyst overview'
 
   return (
     <div className="app workspace-app">
@@ -312,6 +323,14 @@ function AppInner() {
           <a className={activePath === '/submissions' ? 'active' : ''} href="/submissions" onClick={event => { event.preventDefault(); navigate('/submissions') }}>Submissions</a>
           <a className={activePath === '/submissions/new' ? 'active' : ''} href="/submissions/new" onClick={event => { event.preventDefault(); navigate('/submissions/new') }}>Intake</a>
           <a className={activePath === '/search' ? 'active' : ''} href="/search" onClick={event => { event.preventDefault(); navigate('/search') }}>Semantic search</a>
+          <a className={activePath === '/analytics' ? 'active' : ''} href="/analytics" onClick={event => { event.preventDefault(); navigate('/analytics') }}>Analytics</a>
+          <a className={activePath === '/memory' ? 'active' : ''} href="/memory" onClick={event => { event.preventDefault(); navigate('/memory') }}>Memory Network</a>
+          {user?.role === 'admin' && (
+            <>
+              <a className={activePath === '/network-settings' ? 'active' : ''} href="/network-settings" onClick={event => { event.preventDefault(); navigate('/network-settings') }}>Network settings</a>
+              <a href="/central-admin" onClick={event => { event.preventDefault(); navigate('/central-admin') }}>Central admin</a>
+            </>
+          )}
         </div>
         <div className="workspace-account">
           <span className="nav-badge">{user?.role} · {user?.email}</span>
@@ -336,11 +355,21 @@ function AppInner() {
           <SubmissionDetail submissionId={Number(detailMatch[1])} onBack={() => navigate('/submissions')} />
         ) : path === '/search' ? (
           <SemanticSearch onSelectSubmission={id => navigate(`/submissions/${id}`)} />
+        ) : path === '/analytics' ? (
+          <Analytics />
+        ) : path === '/memory' || memoryDetailMatch ? (
+          <MemoryNetwork
+            nodeId={memoryDetailMatch ? Number(memoryDetailMatch[1]) : null}
+            onSelectNode={id => navigate(`/memory/${id}`)}
+            onBack={() => navigate('/memory')}
+          />
+        ) : path === '/network-settings' && user?.role === 'admin' ? (
+          <NetworkSettings />
         ) : (
-          <DashboardHome onNavigate={page => navigate(page === 'search' ? '/search' : '/submissions')} />
+          <DashboardHome onNavigate={page => navigate(page === 'search' ? '/search' : page === 'memory' ? '/memory' : '/submissions')} />
         )}
       </main>
-      <footer className="footer">Cyber Network · Stage 1 analyst workspace</footer>
+      <footer className="footer">Cyber Network · Stage 3 analyst workspace</footer>
     </div>
   )
 }
@@ -352,4 +381,3 @@ export default function App() {
     </AuthProvider>
   )
 }
-

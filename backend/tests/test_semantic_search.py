@@ -122,6 +122,168 @@ class TestSemanticSearchEndpoint:
             r = client.post(SEARCH, json={"query": "suspicious activity"}, headers=_auth(tok))
         assert r.status_code == 503
 
+    def test_cold_faiss_index_falls_back_to_pgvector(self, client):
+        from app.api.v1.endpoints.search import SearchResult
+
+        result = SearchResult(
+            id=81,
+            source_type="alert",
+            sanitized_text_preview="pgvector fallback result",
+            similarity=0.75,
+            submitted_at="2026-01-01T00:00:00",
+            embedding_status="complete",
+        )
+        index = MagicMock(available=False, count=0)
+        with (
+            patch("app.embeddings.client.EmbeddingsClient.embed", return_value=FAKE_EMBEDDING),
+            patch("app.api.v1.endpoints.search.get_faiss_index", return_value=index),
+            patch("app.api.v1.endpoints.search.run_vector_search", return_value=[result]) as pg_search,
+        ):
+            token = _token(client, _ANALYST)
+            response = client.post(
+                SEARCH,
+                json={"query": "fallback query"},
+                headers=_auth(token),
+            )
+
+        assert response.status_code == 200
+        assert response.json()["results"][0]["id"] == 81
+        pg_search.assert_called_once()
+
+    def test_new_submission_is_searchable_through_faiss(self, client):
+        vector = [1.0] + [0.0] * 1535
+        with patch("app.embeddings.client.EmbeddingsClient.embed", return_value=vector):
+            token = _token(client, _ANALYST)
+            submission = client.post(
+                SUBMISSIONS,
+                json={"raw_text": "FAISS searchable submission", "source_type": "alert"},
+                headers=_auth(token),
+            )
+            assert submission.status_code == 201
+            with patch(
+                "app.api.v1.endpoints.search.run_vector_search",
+                side_effect=AssertionError("pgvector should not run on the FAISS fast path"),
+            ):
+                response = client.post(
+                    SEARCH,
+                    json={"query": "matching query", "top_k": 1},
+                    headers=_auth(token),
+                )
+
+        assert response.status_code == 200
+        assert response.json()["results"][0]["id"] == submission.json()["id"]
+        assert response.json()["results"][0]["similarity"] == 1.0
+
+    def test_benchmark_is_admin_only_and_reports_both_paths(self, client):
+        with patch(
+            "app.embeddings.client.EmbeddingsClient.embed",
+            return_value=FAKE_EMBEDDING,
+        ), patch(
+            "app.api.v1.endpoints.search.run_vector_search",
+            return_value=[],
+        ):
+            analyst_token = _token(client, _ANALYST)
+            denied = client.get(
+                "/api/search/semantic/benchmark",
+                params={"query": "benchmark"},
+                headers=_auth(analyst_token),
+            )
+            admin_token = _token(client, _ADMIN)
+            response = client.get(
+                "/api/search/semantic/benchmark",
+                params={"query": "benchmark"},
+                headers=_auth(admin_token),
+            )
+
+        assert denied.status_code == 403
+        assert response.status_code == 200
+        assert response.json()["faiss_available"] is False
+        assert response.json()["faiss_latency_ms"] is None
+        assert response.json()["pgvector_latency_ms"] >= 0
+
+    def test_network_search_returns_local_and_network_groups_separately(self, client):
+        from app.api.v1.endpoints.search import SearchResult
+
+        local_result = SearchResult(
+            id=42,
+            source_type="alert",
+            sanitized_text_preview="internal local result",
+            similarity=0.9,
+            submitted_at="2026-01-01T00:00:00",
+            embedding_status="complete",
+        )
+        network_result = {
+            "sanitized_text": "anonymized shared result",
+            "mitre_technique_ids": ["T1059"],
+            "severity": ["high"],
+            "similarity_score": 0.85,
+        }
+        central = MagicMock()
+        central.search_intel.return_value = {"results": [network_result]}
+        central_context = MagicMock()
+        central_context.__enter__.return_value = central
+        central_context.__exit__.return_value = False
+
+        with (
+            patch("app.embeddings.client.EmbeddingsClient.embed", return_value=FAKE_EMBEDDING),
+            patch("app.api.v1.endpoints.search.run_vector_search", return_value=[local_result]),
+            patch("app.api.v1.endpoints.search.CentralClient", return_value=central_context),
+        ):
+            token = _token(client, _ANALYST)
+            response = client.post(
+                SEARCH,
+                json={"query": "suspicious command", "top_k": 5, "search_network": True},
+                headers=_auth(token),
+            )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["results"][0]["id"] == 42
+        assert body["network_results"] == [network_result]
+        assert body["network_search_attempted"] is True
+        assert body["network_search_error"] is None
+        assert body["total_found"] == 2
+        central.search_intel.assert_called_once_with(FAKE_EMBEDDING, top_k=5)
+
+    def test_central_outage_keeps_local_search_results(self, client):
+        from app.api.v1.endpoints.search import SearchResult
+        from app.central_client import CentralUnavailableError
+
+        local_result = SearchResult(
+            id=8,
+            source_type="log",
+            sanitized_text_preview="local result",
+            similarity=0.77,
+            submitted_at="2026-01-01T00:00:00",
+            embedding_status="complete",
+        )
+        central = MagicMock()
+        central.search_intel.side_effect = CentralUnavailableError(
+            "central offline",
+            attempts=3,
+        )
+        central_context = MagicMock()
+        central_context.__enter__.return_value = central
+        central_context.__exit__.return_value = False
+
+        with (
+            patch("app.embeddings.client.EmbeddingsClient.embed", return_value=FAKE_EMBEDDING),
+            patch("app.api.v1.endpoints.search.run_vector_search", return_value=[local_result]),
+            patch("app.api.v1.endpoints.search.CentralClient", return_value=central_context),
+        ):
+            token = _token(client, _ANALYST)
+            response = client.post(
+                SEARCH,
+                json={"query": "suspicious command", "search_network": True},
+                headers=_auth(token),
+            )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body["results"]) == 1
+        assert body["network_results"] == []
+        assert "unavailable" in body["network_search_error"]
+
     def test_returns_ranked_results_from_mocked_search(self, client):
         """
         Mock run_vector_search to return pre-built results; verify the
@@ -223,8 +385,13 @@ class TestSemanticSearchEndpoint:
 class TestEmbeddingsClient:
     """Unit-test the client in isolation, fully mocked."""
 
-    def test_local_embedding_when_api_key_empty(self):
-        """If no API key is configured, embed() returns a local demo vector."""
+    def test_org_local_vector_storage_dimension_matches_contract(self):
+        from app.core.config import settings
+
+        assert settings.VECTOR_DIM == 1536
+
+    def test_feature_hash_provider_returns_configured_storage_width(self):
+        """The explicit feature-hash option keeps supporting offline deployments."""
         from app.embeddings.client import EmbeddingsClient
         from unittest.mock import patch as _patch
 
@@ -232,6 +399,8 @@ class TestEmbeddingsClient:
             mock_settings.EMBEDDINGS_API_KEY = ""
             mock_settings.EMBEDDINGS_API_URL = "https://api.openai.com/v1/embeddings"
             mock_settings.EMBEDDINGS_MODEL   = "text-embedding-ada-002"
+            mock_settings.EMBEDDING_PROVIDER = "feature_hash"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
             client = EmbeddingsClient()
             result = client.embed("some text")
 
@@ -251,6 +420,8 @@ class TestEmbeddingsClient:
             mock_settings.EMBEDDINGS_API_KEY = "sk-test"
             mock_settings.EMBEDDINGS_API_URL = "https://api.openai.com/v1/embeddings"
             mock_settings.EMBEDDINGS_MODEL   = "text-embedding-ada-002"
+            mock_settings.EMBEDDING_PROVIDER = "openai_compatible"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
             c = EmbeddingsClient()
 
             with patch.object(c, "_call", side_effect=httpx.HTTPStatusError(
@@ -269,6 +440,8 @@ class TestEmbeddingsClient:
             mock_settings.EMBEDDINGS_API_KEY = "sk-test"
             mock_settings.EMBEDDINGS_API_URL = "https://api.openai.com/v1/embeddings"
             mock_settings.EMBEDDINGS_MODEL   = "text-embedding-ada-002"
+            mock_settings.EMBEDDING_PROVIDER = "openai_compatible"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
             c = EmbeddingsClient()
 
             with patch.object(c, "_call", side_effect=httpx.TimeoutException("timeout")):
@@ -287,6 +460,8 @@ class TestEmbeddingsClient:
             mock_settings.EMBEDDINGS_API_KEY = "sk-test"
             mock_settings.EMBEDDINGS_API_URL = "https://api.openai.com/v1/embeddings"
             mock_settings.EMBEDDINGS_MODEL   = "text-embedding-ada-002"
+            mock_settings.EMBEDDING_PROVIDER = "openai_compatible"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
             c = EmbeddingsClient()
 
             with patch.object(c, "_call", return_value=expected_vector):
@@ -294,3 +469,95 @@ class TestEmbeddingsClient:
 
         assert result == expected_vector
         assert len(result) == 1536
+
+    def test_local_sentence_transformer_is_zero_padded_to_storage_width(self):
+        from app.embeddings.client import EmbeddingsClient
+
+        class Model:
+            def encode(self, *_args, **_kwargs):
+                return [0.25] * 384
+
+        with patch("app.embeddings.client.settings") as mock_settings:
+            mock_settings.EMBEDDINGS_API_KEY = ""
+            mock_settings.EMBEDDINGS_API_URL = "https://api.openai.com/v1/embeddings"
+            mock_settings.EMBEDDINGS_MODEL = "text-embedding-ada-002"
+            mock_settings.EMBEDDING_PROVIDER = "local_sentence_transformers"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+            client = EmbeddingsClient()
+            with patch.object(client, "_get_sentence_model", return_value=Model()):
+                result = client.embed("describe a suspicious command")
+
+        assert result is not None
+        assert len(result) == 1536
+        assert result[:384] == [0.25] * 384
+        assert result[384:] == [0.0] * (1536 - 384)
+
+    def test_local_sentence_transformer_load_failure_uses_feature_hash_fallback(self):
+        from app.embeddings.client import EmbeddingsClient
+
+        with patch("app.embeddings.client.settings") as mock_settings:
+            mock_settings.EMBEDDINGS_API_KEY = ""
+            mock_settings.EMBEDDINGS_API_URL = "https://api.openai.com/v1/embeddings"
+            mock_settings.EMBEDDINGS_MODEL = "text-embedding-ada-002"
+            mock_settings.EMBEDDING_PROVIDER = "local_sentence_transformers"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+            client = EmbeddingsClient()
+            expected = client._local_embedding("suspicious process execution")
+            with patch.object(
+                client,
+                "_get_sentence_model",
+                side_effect=OSError("model download failed"),
+            ):
+                actual = client.embed("suspicious process execution")
+
+        assert actual == expected
+        assert len(actual) == 1536
+
+    def test_cached_local_model_load_failure_skips_repeated_load_attempts(self):
+        from app.embeddings.client import EmbeddingsClient
+
+        with patch("app.embeddings.client.settings") as mock_settings:
+            mock_settings.EMBEDDINGS_API_KEY = ""
+            mock_settings.EMBEDDINGS_API_URL = "https://api.openai.com/v1/embeddings"
+            mock_settings.EMBEDDINGS_MODEL = "text-embedding-ada-002"
+            mock_settings.EMBEDDING_PROVIDER = "local_sentence_transformers"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+            client = EmbeddingsClient()
+            client._model_load_attempted = True
+            expected = client._local_embedding("suspicious process execution")
+
+            with patch.object(client, "_get_sentence_model") as get_model:
+                actual = client.embed("suspicious process execution")
+
+        get_model.assert_not_called()
+        assert actual == expected
+
+    def test_openai_compatible_short_vector_is_padded_to_storage_width(self):
+        from app.embeddings.client import EmbeddingsClient
+
+        with patch("app.embeddings.client.settings") as mock_settings:
+            mock_settings.EMBEDDINGS_API_KEY = "test-key"
+            mock_settings.EMBEDDINGS_API_URL = "https://api.example.test/embeddings"
+            mock_settings.EMBEDDINGS_MODEL = "test-model"
+            mock_settings.EMBEDDING_PROVIDER = "openai_compatible"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+            client = EmbeddingsClient()
+            with patch.object(client, "_call", return_value=[0.5] * 384):
+                result = client.embed("same width across providers")
+
+        assert len(result) == 1536
+        assert result[:384] == [0.5] * 384
+        assert result[384:] == [0.0] * (1536 - 384)
+
+    def test_openai_provider_requires_api_key_instead_of_silently_hashing(self):
+        from app.embeddings.client import EmbeddingsClient
+
+        with patch("app.embeddings.client.settings") as mock_settings:
+            mock_settings.EMBEDDINGS_API_KEY = ""
+            mock_settings.EMBEDDINGS_API_URL = "https://api.example.test/embeddings"
+            mock_settings.EMBEDDINGS_MODEL = "test-model"
+            mock_settings.EMBEDDING_PROVIDER = "openai_compatible"
+            mock_settings.LOCAL_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+            result = EmbeddingsClient().embed("no implicit provider changes")
+
+        assert result is None

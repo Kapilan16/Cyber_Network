@@ -55,7 +55,7 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
-def client(db_session):
+def client(db_session, monkeypatch):
     """TestClient with the DB dependency overridden to use SQLite."""
 
     def override_get_db():
@@ -64,7 +64,21 @@ def client(db_session):
         finally:
             pass  # session lifecycle managed by db_session fixture
 
+    async def skip_background_correlation(submission_id: int) -> None:
+        """Keep integration tests isolated from the configured production DB."""
+        return None
+
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.submissions.correlate_submission_background",
+        skip_background_correlation,
+    )
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.submissions.share_submission_background",
+        skip_background_correlation,
+    )
+    app.state.testing_session_factory = TestingSessionLocal
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+    del app.state.testing_session_factory

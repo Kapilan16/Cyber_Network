@@ -33,9 +33,10 @@ interface DashboardSummary {
   active_rules: number
   embedding_complete_count: number
   embedding_pending_count: number
+  active_campaign_count: number
 }
 
-type NavTarget = 'submissions' | 'search'
+type NavTarget = 'submissions' | 'search' | 'memory'
 
 interface Props {
   onNavigate: (page: NavTarget) => void
@@ -122,6 +123,17 @@ export default function DashboardHome({ onNavigate }: Props) {
               : 'All indexed'}
           </span>
         </div>
+
+        <button
+          id="dh-stat-campaigns"
+          className="dh-stat-card accent-green dh-campaign-card"
+          onClick={() => onNavigate('memory')}
+        >
+          <span className="dh-stat-icon">🕸️</span>
+          <span className="dh-stat-value">{summary.active_campaign_count}</span>
+          <span className="dh-stat-label">Recurring patterns</span>
+          <span className="dh-stat-sub">Active campaigns · View memory network →</span>
+        </button>
       </div>
 
       {/* ── Lower panels ── */}

@@ -22,6 +22,16 @@ from sqlalchemy.types import JSON
 
 from app.core.database import Base
 
+try:
+    from pgvector.sqlalchemy import Vector as _PgVector
+
+    def _vector_column(dim: int):
+        return Column(_PgVector(dim).with_variant(JSON(), "sqlite"), nullable=True)
+
+except ImportError:  # pragma: no cover
+    def _vector_column(dim: int):
+        return Column(Text, nullable=True)
+
 
 class Severity(str, enum.Enum):
     low = "low"
@@ -37,6 +47,7 @@ class Rule(Base):
     name: str = Column(String(255), nullable=False, unique=True)
     description: str = Column(Text, nullable=True)
     condition_json: dict = Column(JSON, nullable=False)
+    description_embedding = _vector_column(1536)
     severity: Severity = Column(
         Enum(Severity, name="severity"),
         nullable=False,

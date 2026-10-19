@@ -143,6 +143,22 @@
 .sl-emb.failed   { color: #f87171; }
 .sl-emb.pending  { color: #94a3b8; }
 
+/* Composite risk band */
+.sl-risk {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sl-risk-pending { background: rgba(100,116,139,0.1); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+.sl-risk-low { background: rgba(34,211,165,0.1); color: #6ee7b7; border: 1px solid rgba(34,211,165,0.25); }
+.sl-risk-medium { background: rgba(250,204,21,0.1); color: #facc15; border: 1px solid rgba(250,204,21,0.25); }
+.sl-risk-high { background: rgba(251,146,60,0.1); color: #fb923c; border: 1px solid rgba(251,146,60,0.25); }
+.sl-risk-critical { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+
 /* View button */
 .sl-view-btn {
   padding: 4px 12px;

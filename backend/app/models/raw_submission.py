@@ -54,6 +54,14 @@ class EmbeddingStatus(str, enum.Enum):
     failed   = "failed"    # embedding call failed (non-blocking)
 
 
+class NetworkSyncStatus(str, enum.Enum):
+    not_shared = "not_shared"
+    pending = "pending"
+    shared = "shared"
+    duplicate = "duplicate"
+    failed = "failed"
+
+
 class RawSubmission(Base):
     __tablename__ = "raw_submissions"
 
@@ -95,6 +103,19 @@ class RawSubmission(Base):
         default=EmbeddingStatus.pending,
         server_default=EmbeddingStatus.pending.value,
     )
+    network_sync_status: NetworkSyncStatus = Column(
+        Enum(
+            NetworkSyncStatus,
+            name="networksyncstatus",
+            native_enum=False,
+            create_constraint=True,
+        ),
+        nullable=False,
+        default=NetworkSyncStatus.not_shared,
+        server_default=NetworkSyncStatus.not_shared.value,
+    )
+    network_sync_error: str | None = Column(Text, nullable=True)
+    network_synced_at: datetime | None = Column(DateTime(timezone=True), nullable=True)
 
     # ── Relationships ─────────────────────────────────────────────────────
     submitter = relationship("User", back_populates="submissions", lazy="select")
