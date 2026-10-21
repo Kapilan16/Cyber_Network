@@ -67,7 +67,7 @@ export default function DashboardHome({ onNavigate }: Props) {
   useEffect(() => { load() }, [load])
 
   if (loading) return <div className="dh-loading">Loading dashboard…</div>
-  if (error || !summary) return <div className="dh-loading" style={{ color: '#f87171' }}>⚠ {error ?? 'No data'}</div>
+  if (error || !summary) return <div className="dh-loading dh-error">⚠ {error ?? 'No data'}</div>
 
   const sev = summary.open_findings_by_severity
   const maxSev = Math.max(sev.critical, sev.high, sev.medium, sev.low, 1)
@@ -77,51 +77,61 @@ export default function DashboardHome({ onNavigate }: Props) {
       {/* ── Stats cards ── */}
       <div className="dh-stats-grid">
         <div id="dh-stat-today" className="dh-stat-card accent-cyan">
-          <span className="dh-stat-icon">📥</span>
+          <span className="dh-stat-meta">
+            <span className="dh-stat-icon" aria-hidden="true">📥</span>
+            <span className="dh-stat-sub">{summary.submissions_this_week} this week</span>
+          </span>
           <span className="dh-stat-value">{summary.submissions_today}</span>
           <span className="dh-stat-label">Submissions today</span>
-          <span className="dh-stat-sub">{summary.submissions_this_week} this week</span>
         </div>
 
         <div id="dh-stat-total" className="dh-stat-card accent-slate">
-          <span className="dh-stat-icon">🗃️</span>
+          <span className="dh-stat-meta">
+            <span className="dh-stat-icon" aria-hidden="true">🗃️</span>
+            <span className="dh-stat-sub">{summary.embedding_complete_count} embedded</span>
+          </span>
           <span className="dh-stat-value">{summary.total_submissions}</span>
           <span className="dh-stat-label">Total submissions</span>
-          <span className="dh-stat-sub">
-            {summary.embedding_complete_count} embedded
-          </span>
         </div>
 
         <div id="dh-stat-findings" className="dh-stat-card accent-amber">
-          <span className="dh-stat-icon">🔍</span>
+          <span className="dh-stat-meta">
+            <span className="dh-stat-icon" aria-hidden="true">🔍</span>
+            <span className="dh-stat-sub">{sev.critical} critical</span>
+          </span>
           <span className="dh-stat-value">{summary.total_findings}</span>
           <span className="dh-stat-label">Open findings</span>
-          <span className="dh-stat-sub">{sev.critical} critical</span>
         </div>
 
         <div id="dh-stat-rules" className="dh-stat-card accent-green">
-          <span className="dh-stat-icon">📋</span>
+          <span className="dh-stat-meta">
+            <span className="dh-stat-icon" aria-hidden="true">📋</span>
+            <span className="dh-stat-sub">{summary.total_rules} total</span>
+          </span>
           <span className="dh-stat-value">{summary.active_rules}</span>
           <span className="dh-stat-label">Active rules</span>
-          <span className="dh-stat-sub">{summary.total_rules} total</span>
         </div>
 
         <div id="dh-stat-critical" className="dh-stat-card accent-red">
-          <span className="dh-stat-icon">🚨</span>
+          <span className="dh-stat-meta">
+            <span className="dh-stat-icon" aria-hidden="true">🚨</span>
+            <span className="dh-stat-sub">{sev.critical} critical, {sev.high} high</span>
+          </span>
           <span className="dh-stat-value">{sev.critical + sev.high}</span>
           <span className="dh-stat-label">High+ findings</span>
-          <span className="dh-stat-sub">{sev.critical} critical, {sev.high} high</span>
         </div>
 
         <div id="dh-stat-embed" className="dh-stat-card accent-purple">
-          <span className="dh-stat-icon">🧠</span>
+          <span className="dh-stat-meta">
+            <span className="dh-stat-icon" aria-hidden="true">🧠</span>
+            <span className="dh-stat-sub">
+              {summary.embedding_pending_count > 0
+                ? `${summary.embedding_pending_count} pending`
+                : 'All indexed'}
+            </span>
+          </span>
           <span className="dh-stat-value">{summary.embedding_complete_count}</span>
           <span className="dh-stat-label">Embeddings indexed</span>
-          <span className="dh-stat-sub">
-            {summary.embedding_pending_count > 0
-              ? `${summary.embedding_pending_count} pending`
-              : 'All indexed'}
-          </span>
         </div>
 
         <button
@@ -129,10 +139,12 @@ export default function DashboardHome({ onNavigate }: Props) {
           className="dh-stat-card accent-green dh-campaign-card"
           onClick={() => onNavigate('memory')}
         >
-          <span className="dh-stat-icon">🕸️</span>
+          <span className="dh-stat-meta">
+            <span className="dh-stat-icon" aria-hidden="true">🕸️</span>
+            <span className="dh-stat-sub">Active campaigns</span>
+          </span>
           <span className="dh-stat-value">{summary.active_campaign_count}</span>
           <span className="dh-stat-label">Recurring patterns</span>
-          <span className="dh-stat-sub">Active campaigns · View memory network →</span>
         </button>
       </div>
 
@@ -173,7 +185,7 @@ export default function DashboardHome({ onNavigate }: Props) {
         </div>
 
         {/* Quick actions */}
-        <div className="dh-panel" style={{ gridColumn: '1 / -1' }}>
+        <div className="dh-panel dh-actions-panel">
           <div className="dh-panel-title">Quick actions</div>
           <div className="dh-actions">
             <button
@@ -184,7 +196,7 @@ export default function DashboardHome({ onNavigate }: Props) {
               <span className="dh-action-btn-icon">📋</span>
               <span className="dh-action-btn-text">
                 View all submissions
-                <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--clr-text-muted)', marginTop: '1px' }}>
+                <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '1px' }}>
                   Browse, filter and evaluate past artifacts
                 </span>
               </span>
@@ -199,7 +211,7 @@ export default function DashboardHome({ onNavigate }: Props) {
               <span className="dh-action-btn-icon">🧠</span>
               <span className="dh-action-btn-text">
                 Semantic search
-                <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--clr-text-muted)', marginTop: '1px' }}>
+                <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '1px' }}>
                   Find similar past submissions by meaning
                 </span>
               </span>

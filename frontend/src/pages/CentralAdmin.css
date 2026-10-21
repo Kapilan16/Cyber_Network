@@ -1,22 +1,314 @@
-.central-admin { position: relative; z-index: 1; width: min(1080px, calc(100% - 2rem)); margin: 3rem auto; display: grid; gap: 1rem; }
-.central-admin-header { display: grid; gap: 0.55rem; }
-.central-admin-header p { color: var(--clr-accent); font: 0.68rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; }
-.central-admin-header h1 { font-size: clamp(1.6rem, 4vw, 2.5rem); }
-.central-admin-header span, .central-admin-card > p { color: var(--clr-text-muted); font-size: 0.8rem; line-height: 1.6; }
-.central-admin-auth, .central-admin-card { display: grid; gap: 0.8rem; padding: 1.1rem; border: 1px solid var(--clr-border); border-radius: var(--radius-md); background: var(--clr-surface); }
-.central-admin-auth label { font-size: 0.76rem; color: var(--clr-text-muted); }
-.central-admin-auth input { width: min(100%, 500px); border: 1px solid var(--clr-border); border-radius: var(--radius-sm); padding: 0.65rem; background: var(--clr-surface-2); color: var(--clr-text); }
-.central-admin-auth button { width: fit-content; border: 1px solid rgba(0, 200, 255, 0.35); border-radius: var(--radius-sm); padding: 0.55rem 0.85rem; background: rgba(0, 200, 255, 0.1); color: var(--clr-accent); cursor: pointer; }
-.central-admin-auth button:disabled { opacity: 0.6; cursor: wait; }
-.central-admin-auth a { width: fit-content; color: var(--clr-accent); font-size: 0.75rem; }
-.central-admin-summary, .central-admin-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 0.85rem; }
-.central-admin-summary strong { color: var(--clr-accent); font: 600 1.7rem var(--font-mono); }
-.central-admin-card h2 { font-size: 0.95rem; }
-.central-admin-orgs, .central-admin-techniques { list-style: none; display: grid; gap: 0.55rem; }
-.central-admin-orgs li, .central-admin-techniques li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--clr-border); padding-top: 0.55rem; font-size: 0.78rem; }
-.central-admin-status { font: 0.65rem var(--font-mono); text-transform: uppercase; }
-.central-admin-status.active { color: var(--clr-success); }
-.central-admin-status.suspended { color: var(--clr-warn); }
-.central-admin-techniques code { color: #c4b5fd; font: 0.75rem var(--font-mono); }
-.central-admin-techniques span { color: var(--clr-text-muted); font: 0.75rem var(--font-mono); }
-.central-admin-error { padding: 0.7rem; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #fca5a5; background: rgba(127, 29, 29, 0.12); font-size: 0.8rem; }
+/* ── Central Admin ─────────────────────────────────────────────────────────
+   Design tokens: index.css new system (--bg-*, --border-*, --text-*, etc.)
+   Standalone page (no workspace sidebar). Preserves all class names.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Page root ──────────────────────────────────────────────────────────── */
+.central-admin {
+  position: relative;
+  z-index: 1;
+  width: min(1100px, calc(100% - 2rem));
+  margin: 3rem auto;
+  display: grid;
+  gap: var(--space-6);
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.central-admin-header {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.central-admin-header p {
+  color: var(--accent-color);
+  font: 0.6875rem var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.central-admin-header h1 {
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.central-admin-header span {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+/* ── Auth form ───────────────────────────────────────────────────────────── */
+.central-admin-auth {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.central-admin-auth label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.central-admin-auth input {
+  width: min(100%, 480px);
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font: 0.875rem var(--font-sans);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.central-admin-auth input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.central-admin-auth button {
+  width: fit-content;
+  padding: 0.5rem 1rem;
+  background: var(--action-gradient);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font: 600 0.875rem var(--font-sans);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.central-admin-auth button:hover:not(:disabled) {
+  filter: saturate(1.12) brightness(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+.central-admin-auth button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.central-admin-auth button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.central-admin-auth a {
+  width: fit-content;
+  color: var(--accent-color);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+.central-admin-auth a:hover {
+  opacity: 0.75;
+}
+
+/* ── Error banner ────────────────────────────────────────────────────────── */
+.central-admin-error {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--sev-critical-border);
+  border-radius: var(--r-md);
+  background: var(--sev-critical-bg);
+  color: var(--sev-critical);
+  font-size: 0.8125rem;
+}
+
+/* ── Summary & column grids ──────────────────────────────────────────────── */
+.central-admin-summary,
+.central-admin-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-4);
+}
+
+.central-admin-severity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: var(--space-3);
+}
+
+.central-admin-severity-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--border-color);
+  border-radius: var(--r-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.central-admin-severity-card > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.central-admin-severity-card > div:first-child span {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.central-admin-severity-card > div:first-child strong {
+  color: var(--text-primary);
+  font: 700 1.25rem var(--font-mono);
+}
+
+.central-admin-severity-card.critical { border-top-color: var(--sev-critical); }
+.central-admin-severity-card.high { border-top-color: var(--sev-high); }
+.central-admin-severity-card.medium { border-top-color: var(--sev-medium); }
+.central-admin-severity-card.low { border-top-color: var(--sev-low); }
+
+.central-admin-severity-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--bg-overlay);
+}
+
+.central-admin-severity-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.central-admin-severity-card.critical .central-admin-severity-track span { background: linear-gradient(90deg, #C74752, #EF7C76); }
+.central-admin-severity-card.high .central-admin-severity-track span { background: linear-gradient(90deg, #B95A19, #E99550); }
+.central-admin-severity-card.medium .central-admin-severity-track span { background: linear-gradient(90deg, #946200, #E5B03A); }
+.central-admin-severity-card.low .central-admin-severity-track span { background: linear-gradient(90deg, #16775A, #43B78B); }
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.central-admin-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.central-admin-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-md);
+}
+
+.central-admin-card > span {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-tertiary);
+}
+
+.central-admin-card > p {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+/* Summary stat number */
+.central-admin-summary strong {
+  color: var(--accent-color);
+  font: 700 2rem var(--font-mono);
+  line-height: 1;
+}
+
+.central-admin-card h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/* ── Org list ────────────────────────────────────────────────────────────── */
+.central-admin-orgs,
+.central-admin-techniques {
+  list-style: none;
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.central-admin-orgs li,
+.central-admin-techniques li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0.55rem var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  transition: background var(--transition-fast);
+}
+
+.central-admin-orgs li:last-child,
+.central-admin-techniques li:last-child {
+  border-bottom: none;
+}
+
+.central-admin-orgs li:hover,
+.central-admin-techniques li:hover {
+  background: var(--bg-hover);
+}
+
+.central-admin-orgs li > span:first-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ── Status badge ────────────────────────────────────────────────────────── */
+.central-admin-status {
+  font: 600 0.65rem var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--r-pill);
+}
+
+.central-admin-status.active {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.central-admin-status.suspended {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+/* ── Technique list ──────────────────────────────────────────────────────── */
+.central-admin-techniques code {
+  color: var(--accent-purple);   /* consistent with SubmissionDetail technique chips */
+  font: 0.75rem var(--font-mono);
+}
+
+.central-admin-techniques span {
+  color: var(--text-tertiary);
+  font: 0.75rem var(--font-mono);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .central-admin {
+    margin: 1.5rem auto;
+  }
+}

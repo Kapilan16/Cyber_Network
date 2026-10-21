@@ -81,6 +81,24 @@ export default function CentralAdmin() {
               <span>Registered organizations</span><strong>{organizations.length}</strong>
             </article>
           </section>
+          <section className="central-admin-severity-grid" aria-label="Shared intel by severity">
+            {['critical', 'high', 'medium', 'low'].map(severity => {
+              const count = stats.by_severity.find(item => item.severity.toLowerCase() === severity)?.count ?? 0
+              const proportion = stats.total > 0 ? Math.min(100, count / stats.total * 100) : 0
+              return (
+                <article className={`central-admin-severity-card ${severity}`} key={severity}>
+                  <div><span>{severity}</span><strong>{count}</strong></div>
+                  <div
+                    className="central-admin-severity-track"
+                    role="img"
+                    aria-label={`${severity}: ${count} shared intel, ${proportion.toFixed(1)}% of total`}
+                  >
+                    <span style={{ width: `${proportion}%` }} />
+                  </div>
+                </article>
+              )
+            })}
+          </section>
           <div className="central-admin-columns">
             <section className="central-admin-card">
               <h2>Registered organizations</h2>

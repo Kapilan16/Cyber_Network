@@ -156,7 +156,7 @@ export default function SemanticSearch({ onSelectSubmission }: Props) {
       </label>
 
       {/* Error banner */}
-      {error && <div className="ss-error">⚠ {error}</div>}
+      {error && <div className="ss-error" role="alert">⚠ {error}</div>}
       {response?.network_search_error && (
         <div className="ss-network-warning" role="status">
           {response.network_search_error} Your organization’s results are unaffected.
@@ -173,11 +173,20 @@ export default function SemanticSearch({ onSelectSubmission }: Props) {
         )}
       </div>
 
-      {/* Loading */}
+      {/* Loading skeletons */}
       {loading && (
-        <div className="ss-loading">
-          <span>Embedding query &amp; running similarity search</span>
-          <span className="ss-loading-dots" />
+        <div className="ss-loading" role="status" aria-label="Searching">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="ss-skeleton-card">
+              <div className="ss-skeleton-gauge" />
+              <div className="ss-skeleton-body">
+                <div className="ss-skeleton-line w-30" />
+                <div className="ss-skeleton-line w-90" />
+                <div className="ss-skeleton-line w-70" />
+                <div className="ss-skeleton-line w-50" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -185,9 +194,11 @@ export default function SemanticSearch({ onSelectSubmission }: Props) {
       {!loading && response && results.length === 0 && networkResults.length === 0 && (
         <div className="ss-empty">
           <span className="ss-empty-icon">🧩</span>
-          No semantically similar submissions found.
-          <br />
-          Try broadening your query or submit more artifacts first.
+          <p className="ss-empty-title">No matches found</p>
+          <p className="ss-empty-text">
+            No semantically similar submissions found for this query.
+            Try broader terms or submit more artifacts first.
+          </p>
         </div>
       )}
 
@@ -279,7 +290,9 @@ export default function SemanticSearch({ onSelectSubmission }: Props) {
                           </div>
                           {res.mitre_technique_ids.length > 0 && (
                             <div className="ss-network-techniques">
-                              {res.mitre_technique_ids.join(', ')}
+                              {res.mitre_technique_ids.map(tid => (
+                                <span key={tid} className="ss-technique-tag">{tid}</span>
+                              ))}
                             </div>
                           )}
                           <div className="ss-snippet">{res.sanitized_text || <em>No text available</em>}</div>

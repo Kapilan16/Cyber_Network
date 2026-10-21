@@ -178,17 +178,7 @@ export default function FindingsPanel({ submissionId, onClose }: Props) {
 
       {/* Error */}
       {error && (
-        <div
-          style={{
-            padding: '0.6rem 1rem',
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.25)',
-            borderRadius: 'var(--radius-sm)',
-            color: '#fca5a5',
-            fontSize: '0.8rem',
-            marginBottom: '1rem',
-          }}
-        >
+        <div className="fp-error" role="alert">
           ⚠ {error}
         </div>
       )}

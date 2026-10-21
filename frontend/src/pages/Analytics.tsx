@@ -97,12 +97,18 @@ export default function Analytics() {
       </header>
 
       {error && <div className="analytics-error" role="alert">{error}</div>}
-      {loading && !overview && <div className="analytics-empty">Loading analytics…</div>}
+      {loading && !overview && (
+        <div className="analytics-skeleton-grid" aria-hidden="true">
+          {['a', 'b', 'c', 'd', 'e'].map(k => (
+            <div key={k} className="analytics-skeleton-card" />
+          ))}
+        </div>
+      )}
       {overview && (
         <>
           <section className="analytics-risk-grid" aria-label="Risk band distribution">
             {overview.risk_band_distribution.map(item => (
-              <article className="analytics-card analytics-risk-card" key={item.name}>
+              <article className={`analytics-card analytics-risk-card band-${item.name}`} key={item.name}>
                 <span style={{ color: bandColors[item.name] ?? 'var(--clr-text-muted)' }}>
                   {item.name}
                 </span>
@@ -110,7 +116,7 @@ export default function Analytics() {
                 <small>submissions</small>
               </article>
             ))}
-            <article className="analytics-card analytics-risk-card">
+            <article className="analytics-card analytics-risk-card band-enrichment">
               <span>Enrichment hit rate</span>
               <strong>{overview.enrichment_hit_rate.toFixed(1)}%</strong>
               <small>{overview.non_clean_iocs} non-clean / {overview.enriched_iocs} enriched IOCs</small>

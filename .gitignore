@@ -37,3 +37,4 @@ backend/test.db
 backend/test.db
 .venv/
 node_modules/
+frontend/design-reference/

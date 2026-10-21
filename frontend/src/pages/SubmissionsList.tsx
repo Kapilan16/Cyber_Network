@@ -67,11 +67,13 @@ export default function SubmissionsList({ onSelectSubmission }: Props) {
   const [page, setPage]             = useState(1)
   const [sourceFilter, setSource]   = useState('')
   const [loading, setLoading]       = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const load = useCallback(async (p: number, src: string) => {
     setLoading(true)
+    setFetchError(null)
     try {
       const params = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) })
       if (src) params.set('source_type', src)
@@ -80,7 +82,8 @@ export default function SubmissionsList({ onSelectSubmission }: Props) {
       const data = await r.json() as PaginatedResponse
       setItems(data.items)
       setTotal(data.total)
-    } catch {
+    } catch (e: unknown) {
+      setFetchError(e instanceof Error ? e.message : 'Failed to load submissions')
       setItems([])
     } finally {
       setLoading(false)
@@ -144,15 +147,26 @@ export default function SubmissionsList({ onSelectSubmission }: Props) {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr className="sl-loading-row">
-                <td colSpan={9}>Loading submissions…</td>
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <tr key={`skel-${i}`}>
+                {Array.from({ length: 9 }).map((__, j) => (
+                  <td key={j} className="sl-skeleton-cell">
+                    <div className={`sl-skeleton-line ${j === 7 ? 'w-80' : j === 2 ? 'w-60' : 'w-40'}`} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {!loading && fetchError && (
+              <tr>
+                <td colSpan={9} className="sl-error-cell" role="alert">
+                  ⚠ {fetchError}
+                </td>
               </tr>
             )}
-            {!loading && items.length === 0 && (
+            {!loading && !fetchError && items.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--clr-text-muted)' }}>
-                  No submissions found. Submit your first security artifact above.
+                <td colSpan={9} className="sl-empty-cell">
+                  🛡️ No submissions found. Submit your first security artifact to get started.
                 </td>
               </tr>
             )}
@@ -175,7 +189,7 @@ export default function SubmissionsList({ onSelectSubmission }: Props) {
                   <span className="low">L {sub.findings_by_severity.low}</span>
                 </td>
                 <td><RiskBadge score={sub.risk_score} band={sub.risk_band} /></td>
-                <td style={{ maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                <td className="sl-preview">
                   {sub.sanitized_text?.slice(0, 80) ?? '—'}
                 </td>
                 <td>

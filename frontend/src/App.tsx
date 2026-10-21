@@ -278,9 +278,38 @@ export function Dashboard() {
 
 // ── Root ──────────────────────────────────────────────────────────────────────
 
+function NavIcon({ name }: { name: string }) {
+  const paths: Record<string, string> = {
+    dashboard: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+    incidents: 'M12 3.5 19 6v5.5c0 4.5-3 7.3-7 9-4-1.7-7-4.5-7-9V6l7-2.5Z',
+    add: 'M12 5v14M5 12h14',
+    search: 'M10.8 17.2a6.4 6.4 0 1 1 0-12.8 6.4 6.4 0 0 1 0 12.8ZM16 16l4.2 4.2',
+    network: 'M12 12 5 5M12 12l7-7M12 12l-7 7M12 12l7 7',
+    analytics: 'M4 19V5M4 19h16M7 15l4-4 3 2 5-6',
+    settings: 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM19.4 13.5l1.1.8-1.5 2.6-1.3-.5a7.8 7.8 0 0 1-1.5.9L16 18.7h-3l-.3-1.4a7.8 7.8 0 0 1-1.5-.9l-1.3.5-1.5-2.6 1.1-.8a7.1 7.1 0 0 1 0-1.8l-1.1-.8 1.5-2.6 1.3.5a7.8 7.8 0 0 1 1.5-.9L13 6.7h3l.3 1.4a7.8 7.8 0 0 1 1.5.9l1.3-.5 1.5 2.6-1.1.8a7.1 7.1 0 0 1-.1 1.6Z',
+    admin: 'M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3ZM8 12h8M12 8v8',
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d={paths[name] ?? paths.dashboard} />
+      {name === 'network' && (
+        <>
+          <circle cx="12" cy="12" r="2.5" />
+          <circle cx="5" cy="5" r="1.8" />
+          <circle cx="19" cy="5" r="1.8" />
+          <circle cx="5" cy="19" r="1.8" />
+          <circle cx="19" cy="19" r="1.8" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 function AppInner() {
   const { isAuthenticated, user, logout } = useAuth()
   const [path, setPath] = useState(window.location.pathname)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const updatePath = () => setPath(window.location.pathname)
@@ -291,6 +320,7 @@ function AppInner() {
   const navigate = (destination: string) => {
     window.history.pushState({}, '', destination)
     setPath(destination)
+    setSidebarOpen(false)
   }
 
   if (path === '/central-admin') return <CentralAdmin />
@@ -312,64 +342,131 @@ function AppInner() {
           : path === '/submissions' ? 'Submissions'
             : path === '/search' ? 'Semantic search' : 'Analyst overview'
 
+  const navItems = [
+    { path: '/',                icon: 'dashboard', label: 'Dashboard' },
+    { path: '/submissions',     icon: 'incidents', label: 'Incidents' },
+    { path: '/submissions/new', icon: 'add',       label: 'New Submission' },
+    { path: '/search',          icon: 'search',    label: 'Search' },
+    { path: '/memory',          icon: 'network',   label: 'Memory Network' },
+    { path: '/analytics',       icon: 'analytics', label: 'Analytics' },
+  ]
+
+  const adminItems = [
+    { path: '/network-settings', icon: 'settings', label: 'Network Settings' },
+    { path: '/central-admin',    icon: 'admin',    label: 'Central Admin' },
+  ]
+
   return (
     <div className="app workspace-app">
-      <nav className="nav workspace-nav" aria-label="Main navigation">
-        <a href="/" className="nav-brand" onClick={event => { event.preventDefault(); navigate('/') }}>
-          <span className="brand-icon">CN</span>Cyber Network
-        </a>
-        <div className="workspace-links">
-          <a className={activePath === '/' ? 'active' : ''} href="/" onClick={event => { event.preventDefault(); navigate('/') }}>Overview</a>
-          <a className={activePath === '/submissions' ? 'active' : ''} href="/submissions" onClick={event => { event.preventDefault(); navigate('/submissions') }}>Submissions</a>
-          <a className={activePath === '/submissions/new' ? 'active' : ''} href="/submissions/new" onClick={event => { event.preventDefault(); navigate('/submissions/new') }}>Intake</a>
-          <a className={activePath === '/search' ? 'active' : ''} href="/search" onClick={event => { event.preventDefault(); navigate('/search') }}>Semantic search</a>
-          <a className={activePath === '/analytics' ? 'active' : ''} href="/analytics" onClick={event => { event.preventDefault(); navigate('/analytics') }}>Analytics</a>
-          <a className={activePath === '/memory' ? 'active' : ''} href="/memory" onClick={event => { event.preventDefault(); navigate('/memory') }}>Memory Network</a>
+      {/* ── Mobile overlay ── */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      {/* ── Sidebar ── */}
+      <aside className={`sidebar${sidebarOpen ? ' sidebar-mobile-open' : ''}`} aria-label="Main navigation">
+        <div className="sidebar-brand">
+          <span className="sidebar-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" focusable="false">
+              <path d="M16 5 25 10v11l-9 6-9-6V10l9-5Z" />
+              <path d="m11 13 5-3 5 3v6l-5 3-5-3v-6Z" />
+              <circle cx="16" cy="5" r="2.2" />
+              <circle cx="25" cy="10" r="2.2" />
+              <circle cx="7" cy="10" r="2.2" />
+              <circle cx="25" cy="21" r="2.2" />
+              <circle cx="7" cy="21" r="2.2" />
+            </svg>
+          </span>
+          <span className="sidebar-brand-text">Cyber Memory Network</span>
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map(item => (
+            <a
+              key={item.path}
+              className={`sidebar-item${activePath === item.path ? ' active' : ''}`}
+              href={item.path}
+              aria-current={activePath === item.path ? 'page' : undefined}
+              onClick={event => { event.preventDefault(); navigate(item.path) }}
+            >
+              <span className="sidebar-item-icon"><NavIcon name={item.icon} /></span>
+              {item.label}
+            </a>
+          ))}
           {user?.role === 'admin' && (
             <>
-              <a className={activePath === '/network-settings' ? 'active' : ''} href="/network-settings" onClick={event => { event.preventDefault(); navigate('/network-settings') }}>Network settings</a>
-              <a href="/central-admin" onClick={event => { event.preventDefault(); navigate('/central-admin') }}>Central admin</a>
+              <span className="sidebar-section-label">Administration</span>
+              {adminItems.map(item => (
+                <a
+                  key={item.path}
+                  className={`sidebar-item${activePath === item.path ? ' active' : ''}`}
+                  href={item.path}
+                  aria-current={activePath === item.path ? 'page' : undefined}
+                  onClick={event => { event.preventDefault(); navigate(item.path) }}
+                >
+                  <span className="sidebar-item-icon"><NavIcon name={item.icon} /></span>
+                  {item.label}
+                </a>
+              ))}
             </>
           )}
-        </div>
-        <div className="workspace-account">
-          <span className="nav-badge">{user?.role} · {user?.email}</span>
-          <button type="button" className="workspace-logout" onClick={logout} aria-label="Sign out">Sign out</button>
-        </div>
-      </nav>
-
-      <main className="workspace-main">
-        <header className="workspace-heading">
-          <div>
-            <p className="workspace-kicker">Cyber Network / Analyst workspace</p>
-            <h1>{pageTitle}</h1>
+        </nav>
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <span className="sidebar-user-avatar">{user?.email?.[0]?.toUpperCase() ?? '?'}</span>
+            <div className="sidebar-user-info">
+              <span className="sidebar-user-email">{user?.email}</span>
+              <span className="sidebar-user-role">{user?.role}</span>
+            </div>
           </div>
-          <a className="workspace-primary" href="/submissions/new" onClick={event => { event.preventDefault(); navigate('/submissions/new') }}>＋ New submission</a>
+        </div>
+      </aside>
+
+      {/* ── Page shell ── */}
+      <div className="page-shell">
+        {/* ── Topbar ── */}
+        <header className="topbar">
+          <button className="topbar-hamburger btn-ghost" type="button" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle navigation" aria-expanded={sidebarOpen}>☰</button>
+          <button className="topbar-search" type="button" onClick={() => navigate('/search')} aria-label="Open semantic search">
+            <NavIcon name="search" />
+            <span>Search incidents, IOCs, or memory</span>
+          </button>
+          <div className="topbar-actions">
+            <a className="btn btn-primary btn-sm" href="/submissions/new" onClick={event => { event.preventDefault(); navigate('/submissions/new') }}>＋ New submission</a>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={logout} aria-label="Sign out">Sign out</button>
+          </div>
         </header>
 
-        {path === '/submissions/new' ? (
-          <SubmissionIntake onCreated={id => navigate(`/submissions/${id}`)} />
-        ) : path === '/submissions' ? (
-          <SubmissionsList onSelectSubmission={id => navigate(`/submissions/${id}`)} />
-        ) : detailMatch ? (
-          <SubmissionDetail submissionId={Number(detailMatch[1])} onBack={() => navigate('/submissions')} />
-        ) : path === '/search' ? (
-          <SemanticSearch onSelectSubmission={id => navigate(`/submissions/${id}`)} />
-        ) : path === '/analytics' ? (
-          <Analytics />
-        ) : path === '/memory' || memoryDetailMatch ? (
-          <MemoryNetwork
-            nodeId={memoryDetailMatch ? Number(memoryDetailMatch[1]) : null}
-            onSelectNode={id => navigate(`/memory/${id}`)}
-            onBack={() => navigate('/memory')}
-          />
-        ) : path === '/network-settings' && user?.role === 'admin' ? (
-          <NetworkSettings />
-        ) : (
-          <DashboardHome onNavigate={page => navigate(page === 'search' ? '/search' : page === 'memory' ? '/memory' : '/submissions')} />
-        )}
-      </main>
-      <footer className="footer">Cyber Network · Stage 3 analyst workspace</footer>
+        {/* ── Page content ── */}
+        <main className="page-content">
+          <div className="page-header">
+            <div>
+              <p className="page-breadcrumb">Cyber Network / Analyst workspace</p>
+              <h1 className="page-title">{pageTitle}</h1>
+            </div>
+          </div>
+
+          {path === '/submissions/new' ? (
+            <SubmissionIntake onCreated={id => navigate(`/submissions/${id}`)} />
+          ) : path === '/submissions' ? (
+            <SubmissionsList onSelectSubmission={id => navigate(`/submissions/${id}`)} />
+          ) : detailMatch ? (
+            <SubmissionDetail submissionId={Number(detailMatch[1])} onBack={() => navigate('/submissions')} />
+          ) : path === '/search' ? (
+            <SemanticSearch onSelectSubmission={id => navigate(`/submissions/${id}`)} />
+          ) : path === '/analytics' ? (
+            <Analytics />
+          ) : path === '/memory' || memoryDetailMatch ? (
+            <MemoryNetwork
+              nodeId={memoryDetailMatch ? Number(memoryDetailMatch[1]) : null}
+              onSelectNode={id => navigate(`/memory/${id}`)}
+              onBack={() => navigate('/memory')}
+            />
+          ) : path === '/network-settings' && user?.role === 'admin' ? (
+            <NetworkSettings />
+          ) : (
+            <DashboardHome onNavigate={page => navigate(page === 'search' ? '/search' : page === 'memory' ? '/memory' : '/submissions')} />
+          )}
+        </main>
+        <footer className="footer">Cyber Network · Analyst workspace</footer>
+      </div>
     </div>
   )
 }

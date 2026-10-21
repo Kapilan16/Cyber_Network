@@ -147,6 +147,7 @@ export default function MemoryNetwork({ nodeId, onSelectNode, onBack }: Props) {
     const recurringDifference = Number(campaignIds.has(right.id)) - Number(campaignIds.has(left.id))
     return recurringDifference || new Date(right.last_seen).getTime() - new Date(left.last_seen).getTime()
   })
+  const maximumOccurrences = Math.max(1, ...orderedNodes.map(node => node.occurrence_count))
 
   if (nodeId !== null) {
     const pageCount = Math.max(1, Math.ceil((timeline?.total ?? 0) / PAGE_SIZE))
@@ -261,6 +262,16 @@ export default function MemoryNetwork({ nodeId, onSelectNode, onBack }: Props) {
             </div>
             {campaignIds.has(node.id) && <span className="mn-campaign-tag">Recurring campaign</span>}
             {node.summary && <p className="mn-node-summary">{node.summary}</p>}
+            <div className="mn-occurrence-meter" aria-label={`${node.occurrence_count} occurrences`}>
+              <span>{campaignIds.has(node.id) ? 'Recurring activity' : 'Occurrence volume'}</span>
+              <div className="mn-occurrence-track" aria-hidden="true">
+                <div
+                  className={campaignIds.has(node.id) ? 'recurring' : ''}
+                  style={{ width: `${Math.max(4, node.occurrence_count / maximumOccurrences * 100)}%` }}
+                />
+              </div>
+              <strong>{node.occurrence_count}</strong>
+            </div>
             <span className="mn-card-link">View activity timeline →</span>
           </button>
         ))}
