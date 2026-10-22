@@ -106,6 +106,17 @@ class Settings(BaseSettings):
     @classmethod
     def parse_sharing_lists(cls, value):
         if isinstance(value, str):
+            import json as _json
+            # pydantic-settings v2 may hand us a JSON-encoded list if the env
+            # var was set with square brackets; fall back to comma-splitting.
+            stripped = value.strip()
+            if stripped.startswith("["):
+                try:
+                    parsed = _json.loads(stripped)
+                    if isinstance(parsed, list):
+                        return [str(i).strip() for i in parsed if str(i).strip()]
+                except _json.JSONDecodeError:
+                    pass
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 

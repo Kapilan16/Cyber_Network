@@ -54,6 +54,7 @@ from app.rules.evaluator import evaluate_rule
 from app.rules.seed_rules import SEED_RULES
 from app.sharing.payload import build_shared_intel_payload
 from app.central_client import CentralClient
+from app.risk.service import compute_submission_risk_score
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 log = logging.getLogger("seed_demo")
@@ -839,6 +840,21 @@ def _seed_central_network_demo(session) -> None:
     )
 
 
+def _backfill_risk_scores(session) -> None:
+    """Compute and persist risk scores for any submission that doesn't have one."""
+    from app.models.risk_score import RiskScore
+    scored = 0
+    submissions = session.query(RawSubmission).all()
+    for sub in submissions:
+        already = session.query(RiskScore).filter(RiskScore.submission_id == sub.id).first()
+        if already is None:
+            result = compute_submission_risk_score(session, sub.id, include_network=False)
+            if result:
+                scored += 1
+    session.commit()
+    log.info("Backfilled risk scores: %d/%d submissions scored.", scored, len(submissions))
+
+
 def main() -> None:
     log.info("=== Cyber Network Demo Seed ===")
     log.info("Database: %s", DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL)
@@ -873,6 +889,9 @@ def main() -> None:
 
         # 7. Separate central organizations and their anonymized network data
         _seed_central_network_demo(session)
+
+        # 8. Backfill risk scores for any submission that doesn't have one yet
+        _backfill_risk_scores(session)
 
         log.info("=== Seed complete ===")
         log.info("  Admin:   admin@cybernetwork.demo / Admin@Demo2025!")
